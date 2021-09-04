@@ -1,4 +1,4 @@
-project('raytracing-week1', 'cpp',
+project('ptrt', 'cpp',
   version : '0.1',
   default_options : ['cpp_std=c++20', 'cpp_args=-O3', 'warning_level=3'])
 
@@ -15,7 +15,7 @@ my_src = files([
 
 openmp = dependency('openmp')
 
-exe = executable('raytracing_week1',
+exe = executable('ptrt',
   sources: my_src,
   dependencies: [openmp],
   install : false)
