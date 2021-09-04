@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Meson build directory
+builddir/
+build*/
