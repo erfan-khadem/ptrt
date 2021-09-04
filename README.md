@@ -24,3 +24,5 @@ To run the compiled program:
 ```bash
 ./ptrt
 ```
+# Sample output
+![sample output spheres](https://github.com/er888kh/ptrt/blob/main/images/raytracing_week1_compressed.jpeg?raw=true)
