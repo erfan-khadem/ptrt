@@ -10,6 +10,7 @@ my_src = files([
   'src/material.cpp',
   'src/sphere.cpp',
   'src/utils.cpp',
+  'src/scene.cpp',
   'src/main.cpp'
 ])
 
