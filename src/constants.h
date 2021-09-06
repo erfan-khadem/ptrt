@@ -8,6 +8,7 @@
 const double infinity = std::numeric_limits<double>::infinity();
 const double pi = 3.1415926535897932385;
 
+/*
 //ray getter settings
 const double max_diff = 0.07;
 const double min_avg_ray_changes = 1.05;
@@ -32,3 +33,6 @@ const int max_raytrace_depth = 50;
 
 const std::string output_name = "out.ppm";
 const std::string heatmap_name = "hm.ppm";
+*/
+
+const std::string default_input_name = "scene.json";

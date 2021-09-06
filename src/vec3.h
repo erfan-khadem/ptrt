@@ -3,6 +3,8 @@
 #include <cmath>
 #include <iostream>
 
+#include <nlohmann/json.hpp>
+
 #include "gen_random.h"
 
 using std::sqrt;
@@ -156,6 +158,14 @@ inline vec3 random_in_unit_disk() {
         if (p.length_squared() >= 1) continue;
         return p;
     }
+}
+
+inline void from_json(const nlohmann::json& j, vec3 &v){
+    j.get_to(v.e);
+}
+
+inline void to_json(nlohmann::json& j, const vec3 &v){
+    j = nlohmann::json{v.e[0], v.e[1], v.e[2]};
 }
 
 // Type aliases for vec3

@@ -2,6 +2,10 @@
 
 #include "common.h"
 
+enum hittable_type {
+    SPHERE
+};
+
 class material;
 
 struct hit_record {

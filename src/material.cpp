@@ -50,9 +50,3 @@ double dielectric::reflectance(double cosine, double ref_idx) {
     r0 *= r0;
     return r0 + (1-r0)*pow((1 - cosine),5);
 }
-
-bool glowing::scatter(const ray &r_in, const hit_record &rec,
-color &attenuation, ray &scattered) const {
-    attenuation = glow_color;
-    return false;
-}

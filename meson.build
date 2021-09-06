@@ -14,10 +14,11 @@ my_src = files([
 ])
 
 openmp = dependency('openmp')
+nlohmann_json = dependency('nlohmann_json')
 
 exe = executable('ptrt',
   sources: my_src,
-  dependencies: [openmp],
+  dependencies: [openmp, nlohmann_json],
   install : false)
 
 test('basic', exe)

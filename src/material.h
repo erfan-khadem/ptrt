@@ -3,14 +3,18 @@
 #include "common.h"
 #include "hittable.h"
 
+enum material_type {
+    LAMBERTIAN,
+    METAL,
+    DIELECTRIC
+};
+
 class material {
     public:
         virtual bool scatter(
             const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
         ) const = 0;
         virtual ~material() = default;
-    public:
-        bool glows = false;
 };
 
 class lambertian : public material {
@@ -52,16 +56,4 @@ class dielectric : public material {
         color albedo;
     private:
         static double reflectance(double cosine, double ref_idx);
-};
-
-class glowing : public material {
-    public:
-        glowing(const color& g) : glow_color(g) {glows = true;}
-
-        virtual bool scatter(
-            const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-        ) const override;
-
-    public:
-        color glow_color;
 };
