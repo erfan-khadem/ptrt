@@ -1,4 +1,6 @@
 #include "scene.h"
+#include "hittable_list.h"
+#include "material.h"
 
 #include <fstream>
 #include <memory>
@@ -46,12 +48,33 @@ void scene::from_json(const json& j, scene_object& s){
     j.get_to(s.properties);
 }
 void scene::to_json(json& j, const scene_object& s){
-    // TODO: implement me
-    throw "Not implemented";
+    switch(s.object_type){
+        case hittable_type::SPHERE :
+            j["object_type"] = "sphere";
+            break;
+        default:
+            throw "Invalid object_type";
+    }
+    switch(s.object_material){
+        case material_type::DIELECTRIC :
+            j["material_type"] = "dielectric";
+            break;
+        case material_type::METAL :
+            j["material_type"] = "metal";
+            break;
+        case material_type::LAMBERTIAN :
+            j["material_type"] = "lambertian";
+            break;
+    }
+    to_json(j, s.properties);
 }
 void scene::to_json(json& j, const object_properties& p){
-    // TODO: implement me
-    throw "Not implemented";
+    j["position"] = p.position;
+    j["albedo"] = p.albedo;
+    j["refraction_ratio"] = p.refraction_ratio;
+    j["reflectivity"] = p.reflectivity;
+    j["fuzziness"] = p.fuzziness;
+    j["scale"] = p.scale;
 }
 
 template<typename T>
