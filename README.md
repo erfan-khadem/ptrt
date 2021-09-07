@@ -6,12 +6,12 @@ You will need meson + ninja:
 pip3 install --upgrade meson
 pip3 install --upgrade ninja
 ```
-You will also need OpenMP:
+You will also need OpenMP + Nlohmann-JSON:
 ```bash
 # Debian based distros:
-sudo apt install libomp-dev
+sudo apt install libomp-dev nlohmann-json-dev
 # Arch based distros:
-sudo pacman -Sy openmp
+sudo pacman -Sy openmp nlohmann-json
 ```
 To build use the following commands:
 ```bash
