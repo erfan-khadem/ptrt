@@ -144,8 +144,8 @@ int main(const int argc, const char** argv) {
 	auto out_file = open_output(scene_desc.render.output_name);
 	auto hm_file  = open_output(scene_desc.render.heatmap_name);
 
-	init_stream_picture(out_file);
-	init_stream_picture(hm_file);
+	init_stream_picture(out_file, scene_desc);
+	init_stream_picture(hm_file, scene_desc);
 
 	int64_t total_num_skipped = 0;
 	const int64_t total_num_to_be_done = scene_desc.render.max_samples_per_pixel * 1ll
@@ -211,9 +211,12 @@ int main(const int argc, const char** argv) {
 					pixel_color += sm;
 				}
 			}
-            write_color(out_file, pixel_color, total_samples);
-			write_color(hm_file, color(double(curr_skipped) /
-					double(scene_desc.render.max_samples_per_pixel - scene_desc.render.min_samples_per_pixel), 0.0, 0.0), 1);
+            write_color(out_file, pixel_color, total_samples, scene_desc);
+			write_color(hm_file,
+					color(double(curr_skipped) /
+					double(scene_desc.render.max_samples_per_pixel - scene_desc.render.min_samples_per_pixel), 0.0, 0.0),
+					1,
+					scene_desc);
 			total_num_skipped += curr_skipped;
 		}
 	}

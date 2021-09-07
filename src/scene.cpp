@@ -6,8 +6,8 @@ void scene::from_json(const json &j, object_properties& p){
     if(j.contains("position")){
         j["position"].get_to(p.position);
     }
-    if(j.contains("color")){
-        j["color"].get_to(p.color);
+    if(j.contains("albedo")){
+        j["albedo"].get_to(p.albedo);
     }
     j["refraction_ratio"].get_to(p.refraction_ratio);
     j["reflectivity"].get_to(p.reflectivity);
@@ -27,6 +27,14 @@ void scene::from_json(const json& j, scene_object& s){
         s.object_material = material_type::DIELECTRIC;
     }
     j.get_to(s.properties);
+}
+void scene::to_json(json& j, const scene_object& s){
+    // TODO: implement me
+    throw "Not implemented";
+}
+void scene::to_json(json& j, const object_properties& p){
+    // TODO: implement me
+    throw "Not implemented";
 }
 
 template<typename T>
@@ -58,13 +66,13 @@ hittable_list scene::get_world(const scene_description &desc){
         shared_ptr<material> mat_ptr = nullptr;
         switch (object.object_material) {
             case material_type::LAMBERTIAN:
-                mat_ptr = std::make_shared<lambertian>(object.properties.color);
+                mat_ptr = std::make_shared<lambertian>(object.properties.albedo);
                 break;
             case material_type::DIELECTRIC:
-                mat_ptr = std::make_shared<dielectric>(object.properties.color, object.properties.refraction_ratio);
+                mat_ptr = std::make_shared<dielectric>(object.properties.albedo, object.properties.refraction_ratio);
                 break;
             case material_type::METAL:
-                mat_ptr = std::make_shared<metal>(object.properties.color, object.properties.fuzziness);
+                mat_ptr = std::make_shared<metal>(object.properties.albedo, object.properties.fuzziness);
                 break;
             default:
                 throw "Invalid material type";

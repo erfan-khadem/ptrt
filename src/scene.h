@@ -16,7 +16,7 @@ namespace scene {
     using json = nlohmann::json;
     struct object_properties {
         vec3 position;
-        color color;
+        color albedo;
         double refraction_ratio;
         double reflectivity;
         double fuzziness;
@@ -63,6 +63,8 @@ namespace scene {
 
     void from_json(const json& j, scene_object& s);
     void from_json(const json& j, object_properties& p);
+    void to_json(json& j, const scene_object& s);
+    void to_json(json& j, const object_properties& p);
 
     template<typename T>
     void from_json(const json& j, std::vector<T>& v);
