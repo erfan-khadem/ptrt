@@ -95,8 +95,7 @@ namespace scene {
         vup,
         dist_to_focus,
         aperture,
-        vfov,
-        aspect_ratio
+        vfov
     );
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(

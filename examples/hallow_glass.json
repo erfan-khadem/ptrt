@@ -1,0 +1,69 @@
+{
+    "render": {
+        "image_width": 3840,
+        "image_height": 2160,
+        "group_rays_by": 6,
+        "min_samples_per_pixel": 10,
+        "max_samples_per_pixel": 100,
+        "max_raytrace_depth": 20,
+        "color_bits": 15,
+
+        "max_giveup_difference": 0.07,
+        "min_ray_bounces_giveup_threshold": 1.05,
+
+        "output_name": "out.ppm",
+        "heatmap_name": "hm.ppm"
+    },
+    "camera": {
+        "lookfrom": [0.0, 0.0, 1.0],
+        "lookat": [0.0, 0.0, 0.0],
+        "vup": [0.0, 1.0, 0.0],
+        "dist_to_focus": 1.0,
+        "aperture": 0.0,
+        "vfov": 90.0
+    },
+    "objects": [
+        {
+            "name": "ground",
+            "object_type": "sphere",
+            "material_type": "lambertian",
+            "position": [0.0, -1000.5, 0.0],
+            "albedo": [0.8, 0.8, 0.0],
+            "scale": 1000.0
+        },
+        {
+            "name": "metal ball right",
+            "object_type": "sphere",
+            "material_type": "metal",
+            "position": [0.6, 0.0, -1.2],
+            "albedo": [0.8, 0.6, 0.2],
+            "scale": 0.5,
+            "fuzziness": 1.0
+        },
+        {
+            "name": "metal ball left",
+            "object_type": "sphere",
+            "material_type": "metal",
+            "position": [-0.6, 0.0, -1.2],
+            "albedo": [0.7, 0.7, 0.7],
+            "scale": 0.5,
+            "fuzziness": 0.0
+        },
+        {
+            "name": "glass ball",
+            "object_type": "sphere",
+            "material_type": "dielectric",
+            "position": [0.0, 0.0, 0.0],
+            "scale": 0.5,
+            "refraction_ratio": 1.5
+        },
+        {
+            "name": "glass ball empty inside",
+            "object_type": "sphere",
+            "material_type": "dielectric",
+            "position": [0.0, 0.0, 0.0],
+            "scale": -0.45,
+            "refraction_ratio": 1.5
+        }
+    ]
+}

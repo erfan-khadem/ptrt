@@ -1,18 +1,35 @@
 #include "scene.h"
+
 #include <fstream>
 #include <memory>
 
 void scene::from_json(const json &j, object_properties& p){
-    if(j.contains("position")){
-        j["position"].get_to(p.position);
-    }
+    j["position"].get_to(p.position);
     if(j.contains("albedo")){
         j["albedo"].get_to(p.albedo);
+    } else {
+        p.albedo = {1.0, 1.0, 1.0};
     }
-    j["refraction_ratio"].get_to(p.refraction_ratio);
-    j["reflectivity"].get_to(p.reflectivity);
-    j["fuzziness"].get_to(p.fuzziness);
-    j["scale"].get_to(p.scale);
+    if(j.contains("refraction_ratio")){
+        j["refraction_ratio"].get_to(p.refraction_ratio);
+    } else {
+        p.refraction_ratio = 1.0;
+    }
+    if(j.contains("reflectivity")){
+        j["reflectivity"].get_to(p.reflectivity);
+    } else {
+        p.reflectivity = 1.0;
+    }
+    if(j.contains("fuzziness")){
+        j["fuzziness"].get_to(p.fuzziness);
+    } else {
+        p.fuzziness = 0.0;
+    }
+    if(j.contains("scale")){
+        j["scale"].get_to(p.scale);
+    } else {
+        p.scale = 1.0;
+    }
 }
 
 void scene::from_json(const json& j, scene_object& s){
@@ -57,7 +74,9 @@ scene::scene_description scene::read(const std::string &filename){
     std::ifstream input(filename);
     json result;
     input >> result;
-    return result.get<scene::scene_description>();
+    auto ret = result.get<scene::scene_description>();
+    ret.camera.aspect_ratio = (double)ret.render.image_width / (double)ret.render.image_height;
+    return ret;
 }
 
 hittable_list scene::get_world(const scene_description &desc){
