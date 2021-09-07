@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include <nlohmann/detail/macro_scope.hpp>
@@ -55,10 +56,15 @@ namespace scene {
         double aspect_ratio;
     };
 
+    struct scene_files{
+        std::map<std::string, std::string> file; // map<filename, file content>
+    };
+
     struct scene_description{
         std::vector<scene_object> objects;
         render_properties render;
         camera_properties camera;
+        scene_files files;
     };
 
     void from_json(const json& j, scene_object& s);
@@ -96,6 +102,11 @@ namespace scene {
         dist_to_focus,
         aperture,
         vfov
+    );
+
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+        scene_files,
+        file
     );
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
