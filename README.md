@@ -12,6 +12,8 @@ You will also need OpenMP + Nlohmann-JSON:
 sudo apt install libomp-dev nlohmann-json-dev
 # Arch based distros:
 sudo pacman -Sy openmp nlohmann-json
+# Fedora based distros:
+sudo dnf install libomp-devel json-devel
 ```
 To build use the following commands:
 ```bash
@@ -22,7 +24,7 @@ ninja
 ```
 To run the compiled program:
 ```bash
-./ptrt
+./ptrt /path/to/scene.json
 ```
 # Sample output
 ![sample output hallow glass](https://github.com/er888kh/ptrt/blob/main/images/hallow_glass_4k.jpeg?raw=true)
