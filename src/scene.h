@@ -33,6 +33,8 @@ namespace scene {
     struct render_properties{
         int image_width;
         int image_height;
+        int tile_width;
+        int tile_height;
         int group_rays_by;
         int min_samples_per_pixel;
         int max_samples_per_pixel;
@@ -81,6 +83,8 @@ namespace scene {
         render_properties,
         image_width,
         image_height,
+        tile_width,
+        tile_height,
         group_rays_by,
         min_samples_per_pixel,
         max_samples_per_pixel,
