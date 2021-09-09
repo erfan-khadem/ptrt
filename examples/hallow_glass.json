@@ -2,6 +2,8 @@
     "render": {
         "image_width": 3840,
         "image_height": 2160,
+	"tile_width": 64,
+	"tile_height": 64,
         "group_rays_by": 6,
         "min_samples_per_pixel": 10,
         "max_samples_per_pixel": 100,
