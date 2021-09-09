@@ -7,6 +7,7 @@
 #include "material.h"
 #include "utils.h"
 #include "scene.h"
+#include "vec3.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -16,10 +17,87 @@
 #include <cassert>
 
 #include <omp.h>
+#include <vector>
 
 using std::cout;
 using std::cerr;
 using std::endl;
+
+void ray_color(
+	const ray& r, 
+	const hittable_list& world, 
+	int depth, 
+	const int max_raytrace_depth,
+	ray_return &ret
+);
+
+struct tile {
+	int start_h;
+	int end_h;
+	int start_v;
+	int end_v;
+
+	shared_ptr<std::vector<color>> result;
+
+	tile(){}
+	tile(const int _sh, const int _eh, const int _sv, const int _ev) :
+		start_h(_sh), end_h(_eh), start_v(_sv), end_v(_ev) {}
+
+	shared_ptr<std::vector<color>> calculate(
+		const camera& cam,
+		const hittable_list& world,
+		const scene::render_properties& rp
+	){
+		assert(start_h < end_h);
+		assert(start_v < end_v);
+		result = std::make_shared<std::vector<color>>((end_h - start_h) * (end_v - start_v));
+		int current_pixel = 0;
+		for(int i = start_h; i < end_h; i++){
+			for(int j = start_v; j < end_v; j++){
+				ray_return return_ray;
+				vec3 sm = vec3(0,0,0);
+				vec3 var = vec3(infinity, infinity, infinity);
+				vec3 sm_sq = vec3(0,0,0);
+				vec3 thr = vec3(0,0,0);
+				color col = color(0,0,0);
+				int sm_ray_changes = 0;
+				int num_samples = rp.max_samples_per_pixel;
+				int next_var_check = rp.min_samples_per_pixel;
+				for (int sample = 0; sample < rp.max_samples_per_pixel; sample++) {
+					col.clear();
+					for(int grp = 0; grp < rp.group_rays_by; grp++) {
+						auto u = (i + random_double()) / (rp.image_width-1);
+						auto v = (j + random_double()) / (rp.image_height-1);
+						ray r = cam.get_ray(u, v);
+						ray_color(r, world, rp.max_raytrace_depth-1, rp.max_raytrace_depth, return_ray);
+						col += return_ray.ray_color;
+						sm_ray_changes += return_ray.depth;
+					}
+					col /= rp.group_rays_by;
+					sm += col;
+					sm_sq += col * col;
+					if(sample == next_var_check) {
+						var = sm_sq - (sm * sm) / sample;
+						thr = rp.max_giveup_difference * rp.max_giveup_difference * sm * sm;
+						const double avg_ray_changes = (double)(sm_ray_changes) / (double)(sample * rp.group_rays_by);
+						if(var[0] <= thr[0] && var[1] <= thr[1] && var[2] <= thr[2]) {
+							num_samples = sample + 1;
+							break;
+						} else if(avg_ray_changes < rp.min_ray_bounces_giveup_threshold){
+							num_samples = sample + 1;
+							break;
+						} else {
+							next_var_check += next_var_check >> 1;
+						}
+					}
+				}
+				result->at(current_pixel) = sm / num_samples;
+				current_pixel++;
+			}
+		}
+		return result;
+	}
+};
 
 void ray_color(
 	const ray& r, 
@@ -53,53 +131,28 @@ void ray_color(
 	return;
 }
 
-/*
-hittable_list random_scene() {
-    hittable_list world;
-
-    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
-    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
-
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
-
-            if ((center - point3(4, 0.2, 0)).length() > 0.9) {
-                shared_ptr<material> sphere_material;
-
-                if (choose_mat < 0.8) {
-                    // diffuse
-                    auto albedo = color::random() * color::random();
-                    sphere_material = make_shared<lambertian>(albedo);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else if (choose_mat < 0.95) {
-                    // metal
-                    auto albedo = color::random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
-                    sphere_material = make_shared<metal>(albedo, fuzz);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else {
-                    // glass
-                    sphere_material = make_shared<dielectric>(1.5);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                }
-            }
-        }
-    }
-
-    auto material1 = make_shared<dielectric>(1.5);
-    world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
-
-    auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
-    world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
-
-    auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
-    world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
-
-    return world;
+std::vector<tile> split_to_tiles(const scene::render_properties& rp){
+	std::vector<tile> result;
+	result.reserve(100);
+	for(int i = 0; i < rp.image_width; i+=rp.tile_width){
+		for(int j = 0; j < rp.image_height; j+=rp.tile_height){
+			result.push_back(tile(
+							i, std::min(rp.image_width,i+rp.tile_width),
+							j, std::min(rp.image_height,j+rp.tile_height)));
+		}
+	}
+	return result;
 }
-*/
+
+void sort_tiles(std::vector<tile> &tls){
+	std::sort(
+		tls.begin(),
+		tls.end(),
+		[=](const tile& t1, const tile& t2){
+			return t1.start_h == t2.start_h ? t1.start_v < t2.start_v : t1.start_h < t2.start_h;
+		}
+	);
+}
 
 void print_usage(const std::string& program_name){
 	cerr << "Usage: " 
@@ -125,7 +178,7 @@ int main(const int argc, const char** argv) {
 
 	auto scene_desc = scene::read(filename);
 
-	std::cerr << "Testing random: " << random_in_unit_sphere().x() << endl;
+	std::cerr << "Testing random: " << random_double() << endl;
 
 	// World
 	const auto world = scene::get_world(scene_desc);
@@ -142,86 +195,47 @@ int main(const int argc, const char** argv) {
 	);
 
 	auto out_file = open_output(scene_desc.render.output_name);
-	auto hm_file  = open_output(scene_desc.render.heatmap_name);
 
 	init_stream_picture(out_file, scene_desc);
-	init_stream_picture(hm_file, scene_desc);
 
-	int64_t total_num_skipped = 0;
-	const int64_t total_num_to_be_done = scene_desc.render.max_samples_per_pixel * 1ll
-					* scene_desc.render.image_width
-					* scene_desc.render.image_height;
-
-	for(int j = scene_desc.render.image_height-1; j >= 0; j--) {
-		cerr << "\rDone:" << std::setprecision(5) << 
-			((double(scene_desc.render.image_height - j) * 100.0) / double(scene_desc.render.image_height))
-			<< "       " << std::flush;
-
-		for(int i = 0; i < scene_desc.render.image_width; i++) {
-			int total_samples = 0;
-			int64_t curr_skipped = 0;
-			color pixel_color = color(0,0,0);
-			#pragma omp parallel
+	auto tiles = split_to_tiles(scene_desc.render);
+	int tasks_done = 0;
+	std::vector<tile> results; //We are using a seperate container just to simulate 
+	//receiving tiles from a remote server and storing them to send them later
+	#pragma omp parallel
+	{
+		#pragma omp single
+		for(int i = 0; i < (int)tiles.size(); i++){
+			auto tile = tiles[i];
+			#pragma omp task shared(world, cam, scene_desc)
 			{
-				ray_return return_ray;
-				vec3 sm = vec3(0,0,0);
-				vec3 var = vec3(infinity, infinity, infinity);
-				vec3 sm_sq = vec3(0,0,0);
-				vec3 thr = vec3(0,0,0);
-				color col = color(0,0,0);
-				int sm_ray_changes = 0;
-				int current_sample = 0;
-				int next_var_check = scene_desc.render.min_samples_per_pixel;
-				bool done = false;
-				#pragma omp for reduction (+:total_samples, curr_skipped)
-				for (int _s = 0; _s < scene_desc.render.max_samples_per_pixel; _s++) {
-					if(done){
-						curr_skipped++;
-						continue;
-					}
-					col.clear();
-					for(int grp = 0; grp < scene_desc.render.group_rays_by; grp++) {
-						auto u = (i + random_double()) / (scene_desc.render.image_width-1);
-						auto v = (j + random_double()) / (scene_desc.render.image_height-1);
-						ray r = cam.get_ray(u, v);
-						ray_color(r, world, scene_desc.render.max_raytrace_depth-1, scene_desc.render.max_raytrace_depth, return_ray);
-						col += return_ray.ray_color;
-						sm_ray_changes += return_ray.depth;
-					}
-					col /= scene_desc.render.group_rays_by;
-					current_sample++;
-					total_samples++;
-					sm += col;
-					sm_sq += col * col;
-					if(current_sample == next_var_check) {
-						var = sm_sq - (sm * sm) / current_sample;
-						thr = scene_desc.render.max_giveup_difference * scene_desc.render.max_giveup_difference * sm * sm;
-						const double avg_ray_changes = (double)(sm_ray_changes) / (double)(current_sample * scene_desc.render.group_rays_by);
-						if(var[0] <= thr[0] && var[1] <= thr[1] && var[2] <= thr[2]) {
-							done = true;
-						} else if(avg_ray_changes < scene_desc.render.min_ray_bounces_giveup_threshold){
-							done = true;
-						} else {
-							next_var_check += next_var_check >> 1;
-						}
-					}
-				}
+				tile.calculate(cam, world, scene_desc.render);
 				#pragma omp critical
 				{
-					pixel_color += sm;
+					results.push_back(tile);
+					tasks_done++;
+					cerr << "\rDone " << tasks_done << "/" << tiles.size() << "\t\t\t\t";
 				}
 			}
-            write_color(out_file, pixel_color, total_samples, scene_desc);
-			write_color(hm_file,
-					color(double(curr_skipped) /
-					double(scene_desc.render.max_samples_per_pixel - scene_desc.render.min_samples_per_pixel), 0.0, 0.0),
-					1,
-					scene_desc);
-			total_num_skipped += curr_skipped;
 		}
 	}
-
-	cerr << "\nDone" << endl;
-	cerr << "Skipped " << total_num_skipped << " from " << total_num_to_be_done << endl;
+	std::vector<color> pixel_buf(
+		scene_desc.render.image_width * scene_desc.render.image_height
+	);
+	sort_tiles(results); //probably helps with data locality
+	for(const auto& tl:results){
+		int pos = 0;
+		for(int i = tl.start_h; i < tl.end_h; i++){
+			for(int j = tl.start_v; j < tl.end_v; j++){
+				pixel_buf[j * scene_desc.render.image_width + i] = (*tl.result)[pos];
+				pos++;
+			}
+		}
+	}
+	for(int j = scene_desc.render.image_height - 1; j >= 0; j--){
+		for(int i = 0; i < scene_desc.render.image_width; i++){
+			write_color(out_file, pixel_buf[j*scene_desc.render.image_width + i], 1, scene_desc);
+		}
+	}
 	return 0;
 }
