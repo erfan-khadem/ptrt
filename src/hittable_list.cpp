@@ -1,9 +1,9 @@
 #include "hittable_list.h"
 
-hittable_list::hittable_list(shared_ptr<hittable> object) { add(object); }
+hittable_list::hittable_list(std::shared_ptr<hittable> object) { add(object); }
 
 void hittable_list::clear() { objects.clear(); }
-void hittable_list::add(shared_ptr<hittable> object) { objects.push_back(object); }
+void hittable_list::add(std::shared_ptr<hittable> object) { objects.push_back(object); }
 
 bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     hit_record temp_rec;
