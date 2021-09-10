@@ -255,7 +255,6 @@ int main(const int argc, const char** argv) {
 
 		auto tiles = split_to_tiles(scene_desc.render);
 		int tasks_done = 0;
-		std::vector<tile> results; //We are using a seperate container just to simulate 
 		//receiving tiles from a remote server and storing them to send them later
 		#pragma omp parallel
 		{
@@ -278,8 +277,8 @@ int main(const int argc, const char** argv) {
 		std::vector<color> heat_map(
 			scene_desc.render.image_width * scene_desc.render.image_height
 		);
-		sort_tiles(results); //probably helps with data locality
-		tiles_to_pixel_buf(results, pixel_buf, heat_map, scene_desc.render);
+		sort_tiles(tiles); //probably helps with data locality
+		tiles_to_pixel_buf(tiles, pixel_buf, heat_map, scene_desc.render);
 		for(int j = scene_desc.render.image_height - 1; j >= 0; j--){
 			for(int i = 0; i < scene_desc.render.image_width; i++){
 				write_color(out_file, pixel_buf.at(j*scene_desc.render.image_width + i), 1, scene_desc);
