@@ -38,6 +38,7 @@ struct tile {
 	int end_v;
 
 	shared_ptr<std::vector<color>> result;
+	shared_ptr<std::vector<color>> heat_map;
 
 	tile(){}
 	tile(const int _sh, const int _eh, const int _sv, const int _ev) :
@@ -50,7 +51,9 @@ struct tile {
 	){
 		assert(start_h < end_h);
 		assert(start_v < end_v);
-		result = std::make_shared<std::vector<color>>((end_h - start_h) * (end_v - start_v));
+		const int64_t tile_size = (end_h - start_h) * (end_v - start_v);
+		result = std::make_shared<std::vector<color>>(tile_size);
+		heat_map = std::make_shared<std::vector<color>>(tile_size);
 		int current_pixel = 0;
 		for(int i = start_h; i < end_h; i++){
 			for(int j = start_v; j < end_v; j++){
@@ -92,6 +95,10 @@ struct tile {
 					}
 				}
 				result->at(current_pixel) = sm / num_samples;
+				heat_map->at(current_pixel) = (1.0 - ((num_samples - rp.min_samples_per_pixel) 
+						/ (double)(rp.max_samples_per_pixel - rp.min_samples_per_pixel + 1)))
+					* color(0, 0.5, 1.0);
+				
 				current_pixel++;
 			}
 		}
@@ -133,7 +140,9 @@ void ray_color(
 
 std::vector<tile> split_to_tiles(const scene::render_properties& rp){
 	std::vector<tile> result;
-	result.reserve(100);
+	const int64_t image_pixels = rp.image_width * 1LL * rp.image_height;
+	const int64_t tile_pixels = rp.tile_width * 1LL * rp.tile_height;
+	result.reserve(std::max((int64_t)1, int64_t(image_pixels / tile_pixels) + 100));
 	for(int i = 0; i < rp.image_width; i+=rp.tile_width){
 		for(int j = 0; j < rp.image_height; j+=rp.tile_height){
 			result.push_back(tile(
@@ -173,11 +182,28 @@ std::string get_scene_filename(const int argc, const char** argv){
 	return "";
 }
 
+void tiles_to_pixel_buf(
+	const std::vector<tile>& tiles, 
+	std::vector<color>& output, 
+	std::vector<color>& heat_map,
+	const scene::render_properties& rp
+){
+	for(const auto& tl:tiles){
+		int pos = 0;
+		for(int i = tl.start_h; i < tl.end_h; i++){
+			for(int j = tl.start_v; j < tl.end_v; j++){
+				output.at(j * rp.image_width + i) = (*tl.result).at(pos);
+				heat_map.at(j * rp.image_width + i) = (*tl.heat_map).at(pos);
+				pos++;
+			}
+		}
+	}
+}
+
 int main(const int argc, const char** argv) {
+
 	const auto filename = get_scene_filename(argc, argv);
-
 	auto scene_desc = scene::read(filename);
-
 	std::cerr << "Testing random: " << random_double() << endl;
 
 	// World
@@ -195,8 +221,10 @@ int main(const int argc, const char** argv) {
 	);
 
 	auto out_file = open_output(scene_desc.render.output_name);
+	auto hm_file  = open_output(scene_desc.render.heatmap_name);
 
 	init_stream_picture(out_file, scene_desc);
+	init_stream_picture(hm_file, scene_desc);
 
 	auto tiles = split_to_tiles(scene_desc.render);
 	int tasks_done = 0;
@@ -222,19 +250,15 @@ int main(const int argc, const char** argv) {
 	std::vector<color> pixel_buf(
 		scene_desc.render.image_width * scene_desc.render.image_height
 	);
+	std::vector<color> heat_map(
+		scene_desc.render.image_width * scene_desc.render.image_height
+	);
 	sort_tiles(results); //probably helps with data locality
-	for(const auto& tl:results){
-		int pos = 0;
-		for(int i = tl.start_h; i < tl.end_h; i++){
-			for(int j = tl.start_v; j < tl.end_v; j++){
-				pixel_buf[j * scene_desc.render.image_width + i] = (*tl.result)[pos];
-				pos++;
-			}
-		}
-	}
+	tiles_to_pixel_buf(results, pixel_buf, heat_map, scene_desc.render);
 	for(int j = scene_desc.render.image_height - 1; j >= 0; j--){
 		for(int i = 0; i < scene_desc.render.image_width; i++){
-			write_color(out_file, pixel_buf[j*scene_desc.render.image_width + i], 1, scene_desc);
+			write_color(out_file, pixel_buf.at(j*scene_desc.render.image_width + i), 1, scene_desc);
+			write_color(hm_file, heat_map.at(j*scene_desc.render.image_width + i), 1, scene_desc);
 		}
 	}
 	return 0;
