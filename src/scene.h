@@ -44,6 +44,7 @@ namespace scene {
         double max_giveup_difference;
         double min_ray_bounces_giveup_threshold;
 
+        std::string render_name;
         std::string output_name;
         std::string heatmap_name;
     };
@@ -94,6 +95,7 @@ namespace scene {
         max_giveup_difference,
         min_ray_bounces_giveup_threshold,
 
+        render_name,
         output_name,
         heatmap_name
     );
