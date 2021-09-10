@@ -13,6 +13,7 @@
         "max_giveup_difference": 0.07,
         "min_ray_bounces_giveup_threshold": 1.05,
 
+        "render_name": "hallow glass",
         "output_name": "out.ppm",
         "heatmap_name": "hm.ppm"
     },
