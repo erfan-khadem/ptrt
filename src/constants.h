@@ -34,5 +34,3 @@ const int max_raytrace_depth = 50;
 const std::string output_name = "out.ppm";
 const std::string heatmap_name = "hm.ppm";
 */
-
-const std::string default_input_name = "scene.json";
