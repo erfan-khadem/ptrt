@@ -24,7 +24,7 @@ ninja
 ```
 To run the compiled program:
 ```bash
-./ptrt /path/to/scene.json
+./ptrt standalone /path/to/scene.json
 ```
 # Sample output
 ![sample output hallow glass](https://github.com/er888kh/ptrt/blob/main/images/hallow_glass_4k.jpeg?raw=true)
