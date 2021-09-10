@@ -10,6 +10,7 @@
 #include "vec3.h"
 
 #include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -180,7 +181,7 @@ void sort_tiles(std::vector<tile> &tls){
 void print_usage(const std::string& program_name){
 	cerr << "Usage: " 
 		<< program_name
-		<< "(worker | standalone) (worker|scene description)"
+		<< " (worker | standalone) (worker|scene description)"
 		<< endl;
 	exit(EXIT_FAILURE);
 }
@@ -266,7 +267,7 @@ int main(const int argc, const char** argv) {
 					#pragma omp critical
 					{
 						tasks_done++;
-						cerr << "\rDone " << tasks_done << "/" << tiles.size() << "tiles \t\t\t\t";
+						cerr << "\rDone " << tasks_done << "/" << tiles.size() << " tiles\t\t\t\t";
 					}
 				}
 			}
