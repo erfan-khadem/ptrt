@@ -31,6 +31,20 @@ void ray_color(
 	ray_return &ret
 );
 
+enum program_type {
+	WORKER,
+	STANDALONE
+};
+
+struct job{
+	program_type type;
+	std::string input_filename;
+	job(const program_type _tp, const std::string& file){
+		type = _tp;
+		input_filename = file;
+	}
+};
+
 struct tile {
 	int start_h;
 	int end_h;
@@ -166,20 +180,26 @@ void sort_tiles(std::vector<tile> &tls){
 void print_usage(const std::string& program_name){
 	cerr << "Usage: " 
 		<< program_name
-		<< " [scene filename (default: "
-		<< default_input_name << " ) ]"
+		<< "(worker | standalone) (worker|scene description)"
 		<< endl;
 	exit(EXIT_FAILURE);
 }
 
-std::string get_scene_filename(const int argc, const char** argv){
-	if(argc == 1) {
-		return default_input_name;
-	} else if(argc == 2){
-		return argv[1];
+job get_job(const int argc, const char** argv){
+	if(argc != 3){
+		print_usage(argv[0]);
+		//Exits here
+	} else {
+		if(std::string(argv[1]) == "worker"){
+			return job(program_type::WORKER, argv[2]);
+		} else if(std::string(argv[1]) == "standalone"){
+			return job(program_type::STANDALONE, argv[2]);
+		} else {
+			print_usage(argv[0]);
+			//Exits here
+		}
 	}
-	print_usage(argv[0]);
-	return "";
+	throw "Invalid state";
 }
 
 void tiles_to_pixel_buf(
@@ -201,65 +221,70 @@ void tiles_to_pixel_buf(
 }
 
 int main(const int argc, const char** argv) {
+	const auto job = get_job(argc, argv);
+	cerr << "Testing random: " << random_double() << endl;
+	if(job.type == program_type::WORKER){
+		throw "worker still not implemented";
+	} else {
+		assert(job.type == program_type::STANDALONE); //Make sure we are not in an invalid state
 
-	const auto filename = get_scene_filename(argc, argv);
-	auto scene_desc = scene::read(filename);
-	std::cerr << "Testing random: " << random_double() << endl;
+		auto scene_desc = scene::read(job.input_filename);
 
-	// World
-	const auto world = scene::get_world(scene_desc);
+		cerr << "Starting to render `" << scene_desc.render.render_name << "`" << endl;
 
-	// Camera
-	camera cam(
-		scene_desc.camera.lookfrom,
-		scene_desc.camera.lookat,
-		scene_desc.camera.vup,
-		scene_desc.camera.vfov,
-		scene_desc.camera.aspect_ratio,
-		scene_desc.camera.aperture,
-		scene_desc.camera.dist_to_focus
-	);
+		// World
+		const auto world = scene::get_world(scene_desc);
 
-	auto out_file = open_output(scene_desc.render.output_name);
-	auto hm_file  = open_output(scene_desc.render.heatmap_name);
+		// Camera
+		camera cam(
+			scene_desc.camera.lookfrom,
+			scene_desc.camera.lookat,
+			scene_desc.camera.vup,
+			scene_desc.camera.vfov,
+			scene_desc.camera.aspect_ratio,
+			scene_desc.camera.aperture,
+			scene_desc.camera.dist_to_focus
+		);
 
-	init_stream_picture(out_file, scene_desc);
-	init_stream_picture(hm_file, scene_desc);
+		auto out_file = open_output(scene_desc.render.output_name);
+		auto hm_file  = open_output(scene_desc.render.heatmap_name);
 
-	auto tiles = split_to_tiles(scene_desc.render);
-	int tasks_done = 0;
-	std::vector<tile> results; //We are using a seperate container just to simulate 
-	//receiving tiles from a remote server and storing them to send them later
-	#pragma omp parallel
-	{
-		#pragma omp single
-		for(int i = 0; i < (int)tiles.size(); i++){
-			auto tile = tiles[i];
-			#pragma omp task shared(world, cam, scene_desc)
-			{
-				tile.calculate(cam, world, scene_desc.render);
-				#pragma omp critical
+		init_stream_picture(out_file, scene_desc);
+		init_stream_picture(hm_file, scene_desc);
+
+		auto tiles = split_to_tiles(scene_desc.render);
+		int tasks_done = 0;
+		std::vector<tile> results; //We are using a seperate container just to simulate 
+		//receiving tiles from a remote server and storing them to send them later
+		#pragma omp parallel
+		{
+			#pragma omp single
+			for(int i = 0; i < (int)tiles.size(); i++){
+				#pragma omp task shared(world, cam, scene_desc)
 				{
-					results.push_back(tile);
-					tasks_done++;
-					cerr << "\rDone " << tasks_done << "/" << tiles.size() << "\t\t\t\t";
+					tiles[i].calculate(cam, world, scene_desc.render);
+					#pragma omp critical
+					{
+						tasks_done++;
+						cerr << "\rDone " << tasks_done << "/" << tiles.size() << "tiles \t\t\t\t";
+					}
 				}
 			}
 		}
-	}
-	std::vector<color> pixel_buf(
-		scene_desc.render.image_width * scene_desc.render.image_height
-	);
-	std::vector<color> heat_map(
-		scene_desc.render.image_width * scene_desc.render.image_height
-	);
-	sort_tiles(results); //probably helps with data locality
-	tiles_to_pixel_buf(results, pixel_buf, heat_map, scene_desc.render);
-	for(int j = scene_desc.render.image_height - 1; j >= 0; j--){
-		for(int i = 0; i < scene_desc.render.image_width; i++){
-			write_color(out_file, pixel_buf.at(j*scene_desc.render.image_width + i), 1, scene_desc);
-			write_color(hm_file, heat_map.at(j*scene_desc.render.image_width + i), 1, scene_desc);
+		std::vector<color> pixel_buf(
+			scene_desc.render.image_width * scene_desc.render.image_height
+		);
+		std::vector<color> heat_map(
+			scene_desc.render.image_width * scene_desc.render.image_height
+		);
+		sort_tiles(results); //probably helps with data locality
+		tiles_to_pixel_buf(results, pixel_buf, heat_map, scene_desc.render);
+		for(int j = scene_desc.render.image_height - 1; j >= 0; j--){
+			for(int i = 0; i < scene_desc.render.image_width; i++){
+				write_color(out_file, pixel_buf.at(j*scene_desc.render.image_width + i), 1, scene_desc);
+				write_color(hm_file, heat_map.at(j*scene_desc.render.image_width + i), 1, scene_desc);
+			}
 		}
+		return 0;
 	}
-	return 0;
 }
